@@ -1,0 +1,49 @@
+import customtkinter as ctk
+
+#Validação
+
+def consumo_agua():
+    try:
+      litros = float(campo_litros.get())
+    
+
+    #Dados corretos (Fixos)
+      if litros <= 0:
+        resultado.configure(text='Digite um valor positivo', text_color='red')
+      elif litros < 110:
+        resultado.configure(text='Sustentavel :)',text_color='green')
+      elif 110<= litros <=170 :
+        resultado.configure(text='Mediano',text_color='yellow')
+      else:
+        resultado.configure(text='Nao sustentavel :(', text_color='red')
+
+    except ValueError:
+       resultado.configure(text='Digite um numero!',text_color='red')
+
+
+
+#Aparencia
+ctk.set_appearance_mode('dark')
+
+app = ctk.CTk()
+app.title('Consumo de Agua')
+app.geometry('300x400')
+
+#Litros
+label_litros = ctk.CTkLabel(app,text='Quantos Litros de agua voce consumiu hoje?')
+label_litros.pack(pady=20)
+
+campo_litros = ctk.CTkEntry(app,placeholder_text='Digite quantos Litros')
+campo_litros.pack(pady=1)
+
+
+#Botão
+botão_login = ctk.CTkButton(app,text='Calcular',command= consumo_agua)
+botão_login.pack(pady=30)
+
+#Campo de resposta de login
+resultado = ctk.CTkLabel(app,text='')
+resultado.pack(pady=20)
+
+
+app.mainloop()
