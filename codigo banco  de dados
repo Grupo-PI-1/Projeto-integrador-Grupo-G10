@@ -1,0 +1,30 @@
+-- Cria o banco de dados
+CREATE DATABASE IF NOT EXISTS sistema_login;
+
+-- Seleciona o banco de dados
+USE sistema_login;
+
+-- Cria a tabela de usuários
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario VARCHAR(255) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL
+);
+
+-- Cria a tabela de registros de sustentabilidade
+CREATE TABLE IF NOT EXISTS registros (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    nome_registro VARCHAR(255) NOT NULL,
+    agua INT NOT NULL,
+    energia FLOAT NOT NULL,
+    residuos_nao_reciclaveis FLOAT NOT NULL,
+    percentual_reciclado INT NOT NULL,
+    transporte_publico CHAR(1) NOT NULL,
+    bicicleta CHAR(1) NOT NULL,
+    caminhada CHAR(1) NOT NULL,
+    combustao CHAR(1) NOT NULL,
+    eletrico CHAR(1) NOT NULL,
+    carona_fosseis CHAR(1) NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
