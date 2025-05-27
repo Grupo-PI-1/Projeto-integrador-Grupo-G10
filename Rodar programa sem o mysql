@@ -1,5 +1,58 @@
 import json
 import os
+import uuid
+from numpy import array as arr, dot, linalg
+
+def Cadeia_txt(cad: list) -> str:
+    def Num_to_Alpha(Vall: int) -> str:
+        Alfabeto = {
+            1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F',
+            7: 'G', 8: 'H', 9: 'I', 10: 'J', 11: 'K', 12: 'L',
+            13: 'M', 14: 'N', 15: 'O', 16: 'P', 17: 'Q', 18: 'R',
+            19: 'S', 20: 'T', 21: 'U', 22: 'V', 23: 'W', 24: 'X',
+            25: 'Y', 26: 'Z', 0: ' ', 27: '#'
+        }
+        return Alfabeto[Vall % 28]
+    return ''.join(Num_to_Alpha(v) for v in cad)
+
+def Cadeia_num(cad: str) -> list:
+    def Alpha_to_Num(Letter: str) -> int:
+        Dicio = {
+            'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6,
+            'G': 7, 'H': 8, 'I': 9, 'J': 10, 'K': 11, 'L': 12,
+            'M': 13, 'N': 14, 'O': 15, 'P': 16, 'Q': 17, 'R': 18,
+            'S': 19, 'T': 20, 'U': 21, 'V': 22, 'W': 23, 'X': 24,
+            'Y': 25, 'Z': 26, ' ': 0, '#': 27
+        }
+        return Dicio.get(Letter.upper(), 27)
+    return [Alpha_to_Num(c) for c in cad]
+
+def Cypher(Main_Matriz: list, Cadeia: str) -> str:
+    work = Cadeia_num(Cadeia)
+    if len(work) % 2 != 0:
+        work.append(0)
+    A = work[::2]
+    B = work[1::2]
+    matriz = arr([A, B])
+    Main_Matriz = arr(Main_Matriz).reshape(2, 2)
+    mult = dot(Main_Matriz, matriz)
+    resultado = [val for pair in zip(mult[0], mult[1]) for val in pair]
+    return Cadeia_txt(resultado)
+
+def decypher(Main_Matriz: list, Cadeia: str) -> str:
+    coded = Cadeia_num(Cadeia)
+    if len(coded) % 2 != 0:
+        coded.append(0)
+    A = coded[::2]
+    B = coded[1::2]
+    matriz = arr([A, B])
+    Main_Matriz = arr(Main_Matriz).reshape(2, 2)
+    try:
+        inversa = linalg.inv(Main_Matriz)
+    except linalg.LinAlgError:
+        raise ValueError("A matriz fornecida não é invertível.")
+    resultado = dot(inversa, matriz).round().astype(int).tolist()
+    return Cadeia_txt([val for pair in zip(resultado[0], resultado[1]) for val in pair])
 
 ARQUIVO_DADOS = "dados.json"
 ARQUIVO_USUARIOS = "usuarios.json"
@@ -223,3 +276,42 @@ def inicio():
         else:
             print("Opção inválida. Tente novamente.")
 inicio()
+def inserir_dado(user):
+    nome = input("Digite o nome para o registro: ")
+    if contatoCadastrado(nome, user):
+        print("Este nome já foi registrado. Use outro ou atualize o existente.")
+        return
+
+    try:
+        agua = int(input('Quantos litros de água você consumiu hoje aproximadamente?: '))
+        ene_eletrica = float(input('Quantos kWh de energia elétrica você consumiu hoje?: '))
+        residuos_naoreciclaveis = float(input('Quantos kg de resíduos não recicláveis você gerou hoje?: '))
+        residuos_reciclado_total = int(input('Qual a porcentagem de resíduos reciclados no total (em %)?: '))
+    except ValueError:
+        print('Erro! Os valores devem ser numéricos.')
+        return
+
+    print("Responda com S (sim) ou N (não):")
+    transporte = {
+        'publico': input_transporte("1. Transporte público: "),
+        'bicicleta': input_transporte("2. Bicicleta: "),
+        'caminhada': input_transporte("3. Caminhada: "),
+        'combustao': input_transporte("4. Carro a combustão: "),
+        'eletrico': input_transporte("5. Carro elétrico: "),
+        'carona_fosseis': input_transporte("6. Carona (fóssil): ")
+    }
+
+    dados = carregar_dados()
+    if user not in dados:
+        dados[user] = []
+    dados[user].append({
+        'id': str(uuid.uuid4()),  # ID único
+        'nome': nome,
+        'agua': agua,
+        'energia': ene_eletrica,
+        'residuos_nao_reciclaveis': residuos_naoreciclaveis,
+        'percentual_reciclado': residuos_reciclado_total,
+        **transporte
+    })
+    salvar_dados(dados)
+    print("Registro inserido com sucesso!")
