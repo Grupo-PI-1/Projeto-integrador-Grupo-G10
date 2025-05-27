@@ -1,7 +1,7 @@
-import json
-import os
-import uuid
+import mysql.connector
 from numpy import array as arr, dot, linalg
+
+# ======== Criptografia Personalizada ========
 
 def Cadeia_txt(cad: list) -> str:
     def Num_to_Alpha(Vall: int) -> str:
@@ -47,271 +47,71 @@ def decypher(Main_Matriz: list, Cadeia: str) -> str:
     B = coded[1::2]
     matriz = arr([A, B])
     Main_Matriz = arr(Main_Matriz).reshape(2, 2)
-    try:
-        inversa = linalg.inv(Main_Matriz)
-    except linalg.LinAlgError:
-        raise ValueError("A matriz fornecida não é invertível.")
+    inversa = linalg.inv(Main_Matriz)
     resultado = dot(inversa, matriz).round().astype(int).tolist()
-    return Cadeia_txt([val for pair in zip(resultado[0], resultado[1]) for val in pair])
+    flat = [val for pair in zip(resultado[0], resultado[1]) for val in pair]
+    return Cadeia_txt(flat)
 
-ARQUIVO_DADOS = "dados.json"
-ARQUIVO_USUARIOS = "usuarios.json"
-usuario_logado = None  # Variável global para armazenar o usuário logado
+# ======== Configuração do Banco de Dados ========
 
-# ------------------- INTERFACE INICIAL -------------------
-def nomes():
-    print('+-----------------------------------------------------------------------+')
-    print('|                                                                       |')
-    print('|----------------------PROJETO INTEGRADOR - FASE 3----------------------|')
-    print('|                                                                       |')
-    print('| NOMES:           ABDALLAH ALI BORGES EL KHATIB   - 25018711          |') 
-    print('|                  BERND LORENZ KUHNER JUNIOR      - 24008123          |')
-    print('|                  MIRIA NASCIMENTO DOS ANJOS      - 25892704          |')
-    print('|                  PEDRO ALENCAR BILIU VALE VIEIRA - 24015397          |')
-    print('|                                                                       |')
-    print('+-----------------------------------------------------------------------+')
+CHAVE = [3, 6, 2, 7]  # Chave de criptografia (Hill Cipher simplificado)
 
-# ------------------- USUÁRIOS -------------------
-def carregar_usuarios():
-    if os.path.exists(ARQUIVO_USUARIOS):
-        with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+def conectar():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",            # <-- Troque se necessário
+        password="sua_senha",   # <-- Troque pela sua senha
+        database="sistema_login"
+    )
 
-def salvar_usuarios(usuarios):
-    with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
-        json.dump(usuarios, f, indent=4)
+# ======== Funções do Sistema ========
 
-def cadastrar_usuario():
-    usuarios = carregar_usuarios()
-    nome = input("Crie um nome de usuário: ")
-    if nome in usuarios:
-        print("Nome de usuário já existe. Tente outro.")
-        return None
-    senha = input("Crie uma senha: ")
-    usuarios[nome] = senha
-    salvar_usuarios(usuarios)
-    print("Usuário cadastrado com sucesso!")
-    return nome
-
-def login_usuario():
-    usuarios = carregar_usuarios()
-    nome = input("Usuário: ")
-    senha = input("Senha: ")
-    if nome in usuarios and usuarios[nome] == senha:
-        print(f"Login bem-sucedido! Bem-vindo(a), {nome}.")
-        return nome
-    else:
-        print("Usuário ou senha incorretos.")
-        return None
-
-# ------------------- DADOS DO USUÁRIO -------------------
-def carregar_dados():
-    if os.path.exists(ARQUIVO_DADOS):
-        with open(ARQUIVO_DADOS, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-def salvar_dados(dados):
-    with open(ARQUIVO_DADOS, "w", encoding="utf-8") as f:
-        json.dump(dados, f, indent=4)
-
-def contatoCadastrado(nome, user):
-    dados = carregar_dados()
-    user_dados = dados.get(user, [])
-    for contato in user_dados:
-        if contato["nome"].lower() == nome.lower():
-            return True
-    return False
-
-def input_transporte(msg):
-    while True:
-        resposta = input(msg).strip().upper()
-        if resposta in ['S', 'N']:
-            return resposta
-        else:
-            print("Entrada inválida! Digite apenas 'S' ou 'N'.")
-
-# ------------------- SUSTENTABILIDADE -------------------
-def inserir_dado(user):
-    nome = input("Digite o nome para o registro: ")
-    if contatoCadastrado(nome, user):
-        print("Este nome já foi registrado. Use outro ou atualize o existente.")
-        return
-
+def cadastrar(usuario, senha):
+    senha_cripto = Cypher(CHAVE, senha)
+    db = conectar()
+    cursor = db.cursor()
     try:
-        agua = int(input('Quantos litros de água você consumiu hoje aproximadamente?: '))
-        ene_eletrica = float(input('Quantos kWh de energia elétrica você consumiu hoje?: '))
-        residuos_naoreciclaveis = float(input('Quantos kg de resíduos não recicláveis você gerou hoje?: '))
-        residuos_reciclado_total = int(input('Qual a porcentagem de resíduos reciclados no total (em %)?: '))
-    except ValueError:
-        print('Erro! Os valores devem ser numéricos.')
-        return
+        cursor.execute("INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)", (usuario, senha_cripto))
+        db.commit()
+        print("✅ Usuário cadastrado com sucesso.")
+    except mysql.connector.IntegrityError:
+        print("⚠️ Usuário já existe.")
+    db.close()
 
-    print("Responda com S (sim) ou N (não):")
-    transporte = {
-        'publico': input_transporte("1. Transporte público: "),
-        'bicicleta': input_transporte("2. Bicicleta: "),
-        'caminhada': input_transporte("3. Caminhada: "),
-        'combustao': input_transporte("4. Carro a combustão: "),
-        'eletrico': input_transporte("5. Carro elétrico: "),
-        'carona_fosseis': input_transporte("6. Carona (fóssil): ")
-    }
-
-    dados = carregar_dados()
-    if user not in dados:
-        dados[user] = []
-    dados[user].append({
-        'nome': nome,
-        'agua': agua,
-        'energia': ene_eletrica,
-        'residuos_nao_reciclaveis': residuos_naoreciclaveis,
-        'percentual_reciclado': residuos_reciclado_total,
-        **transporte
-    })
-    salvar_dados(dados)
-    print("Registro inserido com sucesso!")
-
-def listar_dados(user):
-    dados = carregar_dados()
-    user_dados = dados.get(user, [])
-    if not user_dados:
-        print("Nenhum registro encontrado.")
-        return
-    for i, d in enumerate(user_dados, 1):
-        print(f"--- Registro {i} ---")
-        for k, v in d.items():
-            print(f"{k.capitalize()}: {v}")
-        print()
-
-def excluir_dado(user):
-    nome = input("Digite o nome do registro a ser excluído: ")
-    dados = carregar_dados()
-    user_dados = dados.get(user, [])
-    novos_dados = [d for d in user_dados if d["nome"].lower() != nome.lower()]
-    if len(novos_dados) == len(user_dados):
-        print("Registro não encontrado.")
+def login(usuario, senha):
+    senha_cripto = Cypher(CHAVE, senha)
+    db = conectar()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM usuarios WHERE usuario = %s AND senha = %s", (usuario, senha_cripto))
+    resultado = cursor.fetchone()
+    db.close()
+    if resultado:
+        print("✅ Login bem-sucedido!")
+        return True
     else:
-        dados[user] = novos_dados
-        salvar_dados(dados)
-        print("Registro excluído com sucesso!")
+        print("❌ Usuário ou senha inválidos.")
+        return False
 
-def atualizar_dado(user):
-    nome = input("Digite o nome do registro a ser atualizado: ")
-    dados = carregar_dados()
-    user_dados = dados.get(user, [])
-    for d in user_dados:
-        if d["nome"].lower() == nome.lower():
-            try:
-                d['agua'] = int(input("Novo consumo de água (litros): "))
-                d['energia'] = float(input("Novo consumo de energia elétrica (kWh): "))
-                d['residuos_nao_reciclaveis'] = float(input("Novo peso de resíduos não recicláveis (kg): "))
-                d['percentual_reciclado'] = int(input("Nova porcentagem de resíduos reciclados (%): "))
-            except ValueError:
-                print('Erro! Os valores devem ser numéricos.')
-                return
+# ======== Menu de Interface ========
 
-            print("Responda com S (sim) ou N (não):")
-            d['publico'] = input_transporte("1. Transporte público: ")
-            d['bicicleta'] = input_transporte("2. Bicicleta: ")
-            d['caminhada'] = input_transporte("3. Caminhada: ")
-            d['combustao'] = input_transporte("4. Carro a combustão: ")
-            d['eletrico'] = input_transporte("5. Carro elétrico: ")
-            d['carona_fosseis'] = input_transporte("6. Carona (fóssil): ")
-            salvar_dados(dados)
-            print("Registro atualizado com sucesso!")
-            return
-    print("Registro não encontrado.")
-
-# ------------------- MENU PRINCIPAL -------------------
-def menu(user):
+if __name__ == "__main__":
     while True:
-        print("\n" + "-" * 50)
-        print("         --- PROJETO INTEGRADOR FASE 3 ---     ")
-        print("-" * 50)
-        print("*  1. Inserir novo registro")
-        print("*  2. Atualizar registro existente")
-        print("*  3. Excluir registro")
-        print("*  4. Listar todos os registros")
-        print("*  5. Sair")
-        print("-" * 50)
-        opcao = input("Escolha uma opção (1-5): ")
+        print("\n==== MENU ====")
+        print("[1] Cadastrar")
+        print("[2] Login")
+        print("[0] Sair")
+        op = input("Escolha: ")
 
-        if opcao == '1':
-            inserir_dado(user)
-        elif opcao == '2':
-            atualizar_dado(user)
-        elif opcao == '3':
-            excluir_dado(user)
-        elif opcao == '4':
-            listar_dados(user)
-        elif opcao == '5':
-            print("Encerrando sessão...")
+        if op == "1":
+            u = input("Usuário: ")
+            s = input("Senha: ")
+            cadastrar(u, s)
+        elif op == "2":
+            u = input("Usuário: ")
+            s = input("Senha: ")
+            login(u, s)
+        elif op == "0":
+            print("Encerrando...")
             break
         else:
-            print("Opção inválida. Tente novamente.")
-
-# ------------------- PROGRAMA INICIAL -------------------
-def inicio():
-    nomes()
-    print("Bem-vindo ao sistema de sustentabilidade!")
-    
-    while True:
-        print("\n1. Login")
-        print("2. Cadastrar novo usuário")
-        print("3. Sair")
-        escolha = input("Escolha uma opção: ")
-
-        if escolha == "1":
-            user = login_usuario()
-            if user:
-                menu(user)
-        elif escolha == "2":
-            user = cadastrar_usuario()
-            if user:
-                menu(user)
-        elif escolha == "3":
-            print("Encerrando o programa. Até logo!")
-            break
-        else:
-            print("Opção inválida. Tente novamente.")
-inicio()
-def inserir_dado(user):
-    nome = input("Digite o nome para o registro: ")
-    if contatoCadastrado(nome, user):
-        print("Este nome já foi registrado. Use outro ou atualize o existente.")
-        return
-
-    try:
-        agua = int(input('Quantos litros de água você consumiu hoje aproximadamente?: '))
-        ene_eletrica = float(input('Quantos kWh de energia elétrica você consumiu hoje?: '))
-        residuos_naoreciclaveis = float(input('Quantos kg de resíduos não recicláveis você gerou hoje?: '))
-        residuos_reciclado_total = int(input('Qual a porcentagem de resíduos reciclados no total (em %)?: '))
-    except ValueError:
-        print('Erro! Os valores devem ser numéricos.')
-        return
-
-    print("Responda com S (sim) ou N (não):")
-    transporte = {
-        'publico': input_transporte("1. Transporte público: "),
-        'bicicleta': input_transporte("2. Bicicleta: "),
-        'caminhada': input_transporte("3. Caminhada: "),
-        'combustao': input_transporte("4. Carro a combustão: "),
-        'eletrico': input_transporte("5. Carro elétrico: "),
-        'carona_fosseis': input_transporte("6. Carona (fóssil): ")
-    }
-
-    dados = carregar_dados()
-    if user not in dados:
-        dados[user] = []
-    dados[user].append({
-        'id': str(uuid.uuid4()),  # ID único
-        'nome': nome,
-        'agua': agua,
-        'energia': ene_eletrica,
-        'residuos_nao_reciclaveis': residuos_naoreciclaveis,
-        'percentual_reciclado': residuos_reciclado_total,
-        **transporte
-    })
-    salvar_dados(dados)
-    print("Registro inserido com sucesso!")
+            print("Opção inválida.")
