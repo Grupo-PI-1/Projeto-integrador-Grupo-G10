@@ -31,4 +31,8 @@ telas de login e cadastro.
 15/04/2025
   Abdallah e miriã alterou o relatorio
   28/04/2025
-  Pedro conectou o banco de dados com o projeto 
+  Pedro conectou o banco de dados com o projeto
+  Abdallah e myriã adicionou a criptografia
+  pedro fez alteracão no banco de dados
+  abdallah fez o programa rodar sem o mysql pelo json
+  miriã atualizou relatório
